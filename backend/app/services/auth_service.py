@@ -17,7 +17,7 @@ def register_admin(db: Session, data: AdminRegisterRequest):
         email=data.email,
         full_name=data.full_name,
         hashed_password=hash_password(data.password),
-       
+       role = UserRole.ADMIN
         
     )
     db.add(admin)
@@ -42,8 +42,9 @@ def authenticate_user(db: Session, data: LoginRequest):
             detail="Account is inactive",
         )
     token=create_access_token({"sub":user.email})
-    return{
-        TokenData
+    return{"access_token":token,
+           "token_type":"bearer"
+        
     }
     
 

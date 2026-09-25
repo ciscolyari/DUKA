@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-# from sqlalchemy.orm import Session 
-from app.routers import auth
+
+from app.routers import auth,products
 from .core.database import engine,Base
 
 
@@ -12,5 +12,21 @@ app=FastAPI()
 Base.metadata.create_all(engine)
 
 app.include_router(auth.router)
-# app.include_router(notes.router)
+app.include_router(products.router)
+#app.include_router(users.router)
+# app.include_router(sales.router)
+# app.include_router(reports.router)
 
+
+@app.get("/")
+def root():
+    return{
+        "message":"Welcome to DUKA",
+        "docs":"/docs",
+        "status":"running"
+    }
+    
+    
+@app.get("/Health")
+def health_check():
+    return{"status":"Health"}   
