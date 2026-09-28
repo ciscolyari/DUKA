@@ -7,11 +7,11 @@ from app.models.user import User
 
 
 def createProduct(db:Session, data:productcreate, current_user: User):
-    existing = db.query(Product).filter(Product.shop_id == current_user.id,Product.name == data.name).first()
+    existing = db.query(Product).filter(Product.shop_id == current_user.shop_id,Product.name == data.name).first()
    
     if  existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"product'{data.name}' already exist in this shop")
-    product = Product(shop_id= current_user.id,
+    product = Product(shop_id= current_user.shop_id,
                       name=data.name,
                       description=data.description,
                      
@@ -32,7 +32,7 @@ def get_products(db: Session,current_user: User,active_only : bool = True,
     low_stock_only:bool = False,
     
 ):
-    query = db.query(Product).filter(Product.shop_id == current_user.id)
+    query = db.query(Product).filter(Product.shop_id == current_user.shop_id)
     if active_only:
         query = query.filter(Product.Active == True)
     if search:
@@ -46,13 +46,13 @@ def get_products(db: Session,current_user: User,active_only : bool = True,
 
 
 def get_product(db: Session, product_id: int, current_user: User):
-    product = (db.query(Product).filter(Product.id == product_id, Product.shop_id == current_user.id).first())
+    product = (db.query(Product).filter(Product.id == product_id, Product.shop_id == current_user.shop_id).first())
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     return product
 
 
-def update_product(db: Session, product_id: int, data: productUpdate, current_user: User) -> Product:
+def update_product(db: Session, product_id: int, data: productUpdate, current_user: User):
     """Admin updates product fields."""
     product = get_product(db, product_id, current_user)
     update_data = data.model_dump(exclude_unset=True)

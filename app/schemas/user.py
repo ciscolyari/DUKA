@@ -29,7 +29,7 @@ class AdminCreate(BaseModel):
     name:str
     email: EmailStr
     password:str
-    shop_id:int
+    #shop_id:int=None
 
     
 class UserResponse(BaseModel):
