@@ -9,7 +9,7 @@ class Shop(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    #user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     location = Column(String, nullable=False)
     Active = Column(Boolean, default=True, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)

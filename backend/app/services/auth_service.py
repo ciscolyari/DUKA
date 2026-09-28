@@ -17,7 +17,8 @@ def register_admin(db: Session, data: AdminRegisterRequest):
         email=data.email,
         full_name=data.full_name,
         hashed_password=hash_password(data.password),
-       role = UserRole.ADMIN
+        role = UserRole.ADMIN,
+        shop_id=data.shop_id
         
     )
     db.add(admin)
@@ -41,7 +42,10 @@ def authenticate_user(db: Session, data: LoginRequest):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is inactive",
         )
-    token=create_access_token({"sub":user.email})
+    token = create_access_token( { "sub": str(user.id),
+                                  "email": user.email,
+                                  "role": user.role.value,
+                                  "shop_id": user.shop_id, } )
     return{"access_token":token,
            "token_type":"bearer"
         

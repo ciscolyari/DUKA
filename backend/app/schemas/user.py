@@ -9,24 +9,34 @@ from datetime import datetime
 
 
 class userBase(BaseModel):
-    name:str
+    full_name:str
     email:EmailStr
     role: UserRole = UserRole.EMPLOYEE
     
     
 class createuser(userBase):
-    passwowrd: str=Field( minlength=6)
+    password: str=Field( minlength=6)
     
 class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, min_length=2, max_length=255)
     password: Optional[str] = Field(None, min_length=6)
     Active: Optional[bool] = None    
     
+
+
+
+class AdminCreate(BaseModel):
+    name:str
+    email: EmailStr
+    password:str
+    shop_id:int
+
     
 class UserResponse(BaseModel):
     id: int
     full_name: str
     email:EmailStr
+    role:UserRole
     active: bool
     created_at: datetime
 

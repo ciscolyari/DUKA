@@ -16,7 +16,7 @@ class TokenData(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    username: str = Field(..., min_length=3, max_length=100)
+    email: EmailStr
     password: str = Field(..., min_length=4)
 
 
@@ -25,3 +25,4 @@ class AdminRegisterRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=255)
     email: EmailStr = Field(..., min_length=3, max_length=100, unique=True)
     password: str = Field(..., min_length=6)
+    shop_id: int
