@@ -18,7 +18,7 @@ def register_admin(db: Session, data: AdminRegisterRequest):
         full_name=data.full_name,
         hashed_password=hash_password(data.password),
         role = UserRole.ADMIN,
-        shop_id=data.shop_id
+       # shop_id=data.shop_id
         
     )
     db.add(admin)
