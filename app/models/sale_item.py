@@ -14,7 +14,7 @@ class SaleItem(Base):
     sale_id = Column(Integer, ForeignKey("sales.id"), nullable=False, index=True)
     product_id = Column(Integer, ForeignKey("products.id",ondelete="CASCADE"), nullable=False, index=True)
     quantity = Column(Integer, nullable=False)
-    unit_price = Column(Numeric(12, 2), nullable=False)
+    price = Column(Numeric(12, 2), nullable=False)
     subtotal = Column(Numeric(12, 2), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 

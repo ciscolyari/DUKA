@@ -20,12 +20,12 @@ def to_response(product):
         shop_id=product.shop_id,
         name=product.name,
         description=product.description,
-        sku=product.sku,
+        #sku=product.sku,
         selling_price=product.selling_price,
         stock_quantity=product.stock_quantity,
-        low_stock=product.low_stock_threshold,
-        is_low_stock=product.is_low_stock,
-        active=product.is_active,
+        #low_stock=product.low_stock_threshold,
+        #is_low_stock=product.is_low_stock,
+        active=product.Active,
         created_at=product.created_at,
         updated_at=product.updated_at,)
     

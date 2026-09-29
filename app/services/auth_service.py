@@ -11,6 +11,15 @@ def register_admin(db: Session, data: AdminRegisterRequest):
     existing = db.query(User).filter(User.email == data.email).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="Email already taken",)
+    
+    
+    shop = Shop(
+        name=data.shop_name,
+        location=data.location
+    )
+
+    db.add(shop)
+    db.flush()
 
 
     admin = User(
@@ -18,7 +27,7 @@ def register_admin(db: Session, data: AdminRegisterRequest):
         full_name=data.full_name,
         hashed_password=hash_password(data.password),
         role = UserRole.ADMIN,
-       # shop_id=data.shop_id
+        shop_id=shop.id
         
     )
     db.add(admin)
