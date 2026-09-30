@@ -18,7 +18,7 @@ def createProduct(db:Session, data:productcreate, current_user: User):
                       #sku=data.sku,
                       selling_price=data.selling_price,
                       stock_quantity=data.stock_quantity,
-                     # low_stock=data.low_stock
+                     low_stock=data.low_stock
                       )
     db.add(product)
     db.commit()
@@ -40,7 +40,7 @@ def get_products(db: Session,current_user: User,active_only : bool = True,
         query = query.filter((Product.name.ilike(term)))
     products = query.order_by(Product.name).all()    
     if low_stock_only:
-        products = [p for p in products if p.is_low_stock]   
+        products = [p for p in products if p.low_stock]   
     return products
 
 
@@ -58,8 +58,8 @@ def update_product(db: Session, product_id: int, data: productUpdate, current_us
     update_data = data.model_dump(exclude_unset=True)
 
     if "name" in update_data and update_data["name"] != product.name:
-        existing = db.query(Product).filter(Product.shop_id == current_user.shop_id, Product.name == update_data["name"], Product.id != product_id,).first()
-    if existing:
+      existing = db.query(Product).filter(Product.shop_id == current_user.shop_id, Product.name == update_data["name"], Product.id != product_id,).first()
+      if existing:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=f"Product '{update_data['name']}' already exists in this shop",)
 
     for field, value in update_data.items():
@@ -72,10 +72,10 @@ def update_product(db: Session, product_id: int, data: productUpdate, current_us
 
 
 def restock_product(db: Session, product_id: int, data: Restock, current_user: User):
-    """Admin adds stock. Example: 20 + 50 = 70."""
+   
     product = get_product(db, product_id, current_user)
 
-    if not product.is_active:
+    if not product.Active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot restock an inactive product",

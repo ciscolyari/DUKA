@@ -16,7 +16,7 @@ class Product(Base):
     description = Column(Text, nullable=True)
     selling_price = Column(Numeric(12, 2), nullable=False)
     stock_quantity = Column(Integer, nullable=False, default=0)
-    #low_stock = Column(Integer,nullable=True,default=0)
+    low_stock = Column(Integer,nullable=True,default=0)
     Active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)

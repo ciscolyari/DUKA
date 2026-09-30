@@ -6,11 +6,12 @@ from datetime import datetime
 
 class Product(BaseModel):
     name: str = Field(min_length=1, max_length=100)
+    shop_id:int
     description: Optional[str] = None
     #sku:Optional[str] = Field(None, max_length=100)
     selling_price: Decimal =Field(gt=0)
     stock_quantity: int = Field(ge=0)
-    #low_stock: int = Field(10, ge=0)
+    low_stock: int = Field(10, ge=0)
     
 class productcreate(Product):
     pass
@@ -22,7 +23,7 @@ class productUpdate(BaseModel):
         #sku: Optional[str] = None
         selling_price: Decimal = Field(gt=0)
         stock_quantity: int =Field(ge=0)
-        #low_stock: Optional[int] = Field(None, ge=0)
+        low_stock: Optional[int] = Field(None, ge=0)
         active: Optional[bool]=None
         
 class Restock(BaseModel):

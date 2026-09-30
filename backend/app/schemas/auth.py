@@ -25,4 +25,5 @@ class AdminRegisterRequest(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=255)
     email: EmailStr = Field(..., min_length=3, max_length=100, unique=True)
     password: str = Field(..., min_length=6)
-    #shop_id: int
+    shop_name: str = Field(..., min_length=2, max_length=255)
+    location: str = Field(..., min_length=2, max_length=255)
