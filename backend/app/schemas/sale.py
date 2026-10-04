@@ -9,6 +9,7 @@ from datetime import datetime
 class SaleItemCreate(BaseModel):
     product_id: int
     quantity: int=Field(gt=0)
+    price:Decimal=Field(gt=0, description="selling price")
     
     
 class SaleCreate(BaseModel):
@@ -42,3 +43,17 @@ class SaleResponse(BaseModel):
     
     class config:
         from_attributes = True
+        
+class MySalesSummary(BaseModel):
+    date: str
+    total_transactions:int
+    main_total: Decimal
+    sales: List[SaleResponse] = []
+    
+    
+class DailySaleSummary(BaseModel):
+    date: int
+    total_sales: Decimal
+    total_transactions: int
+    by_employee:List[dict] = []
+    by_product: List[dict] = []            

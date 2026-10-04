@@ -15,56 +15,104 @@ from datetime import datetime, timezone,date
 
 def employee_sale_lock(sale:Sale, current_user:User):
     if current_user.role == UserRole.EMPLOYEE and (sale.is_locked or sale.status == SaleStatus.SUBMITTED):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDEN, detail={"message":"This sale is locked cannot modified"})
+        raise HTTPException(status_code=status.HTTP_403_FORBIDEN, detail={"message":"This sale is locked cannot modified", "sale_id": sale.id})
     
     
 def employee_not_delete(sale: Sale, current_user: User):
     if current_user.role == UserRole.EMPLOYEE:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"message":"employeee cannot delete sales"}) 
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"message":"employeee cannot delete sales", "sale_id":sale.id}) 
     
-def create_sale(db:Session, data:SaleCreate, current_user): 
+def create_sale(db: Session, data: SaleCreate, current_user: User) -> Sale:
     if not data.items:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="sale must contain at least one item")
-    product_quantity: dict[int, int] = {}
-    for item in data.items:
-        product_quantity[item.product_id] = product_quantity.get(item.product_id, 0) + item.quantity
-        
-    sale_item_data=[]
-    total_amount = Decimal("0.00")          
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Sale must contain at least one item",
+        )
+
     
-    for product_id, quantity in product_quantity.items():
-        product = (db.query(Product).filter(Product.id == product_id, Product.shop_id == current_user.shop_id, Product.Active == True).first())
+    # product_quantity: dict[int, int] = {}
+    # for item in data.items:
+    #     product_quantity[item.product_id] = (
+    #         product_quantity.get(item.product_id, 0) + item.quantity
+        
+
+    sale_item_data = []
+    total_amount = Decimal("0.00")
+
+    # for product_id, quantity in product_quantity.items():
+    for item in data.items:
+        product = (
+            db.query(Product)
+            .filter(
+                Product.id == item.product_id,
+                Product.shop_id == current_user.shop_id,
+                Product.Active == True,  
+            )
+            .first()
+        )
         if not product:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"product with{product_id} not found")
-        if product.stock_quantity < quantity:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"message":"insufficient stock"})
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Product with id {item.product_id} not found",
+            )
+
+        if product.stock_quantity < item.quantity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "message": "Insufficient stock",
+                    "product": product.name,
+                    "available": product.stock_quantity,
+                    "requested": item.quantity,
+                },
+            )
+
         price = product.selling_price
-        subtotal = price*quantity
-        sale_item_data.append({"product":product, "price":price, "quantity":quantity, "subtotal":subtotal})
-        
-        sale = Sale(shop_id= current_user.shop_id, employee_id = current_user.id, total_amount = total_amount, status= SaleStatus.SUBMITTED, is_locked = True)
-        db.add(sale)
-        db.flush()
-        
-        for item_data in sale_item_data:
-            sale_item = SaleItem(sale_id=sale.id, product_id=item_data["product"].id,quantity=item_data["quantity"],price=item_data["price"],
-                                 subtotal=item_data["subtotal"])
-            db.add(sale_item)
-            adjust_stock(db, item_data["product"], -item_data["quantity"],)
-        db.commit()
-        db.refresh(sale)
-        
-        sale = (
-    db.query(Sale)
-    .options(
-        joinedload(Sale.items).joinedload(SaleItem.product),
-        joinedload(Sale.employee)
+        subtotal = price * item.quantity
+        total_amount += subtotal   # ← MUHIMU
+
+        sale_item_data.append({
+            "product": product,
+            "quantity": item.quantity,
+            "price": price,  
+            "subtotal": subtotal,
+        })
+
+    
+    sale = Sale(
+        shop_id=current_user.shop_id,
+        employee_id=current_user.id,
+        total_amount=total_amount,
+        status=SaleStatus.SUBMITTED,
+        is_locked=True,
     )
-    .filter(Sale.id == sale.id)
-    .first()
-)
-        #sale = db.query(Sale).options(joinedload(sale.items).joinedload(SaleItem.product), joinedload(Sale.employee)).filter(sale.id == sale.id).first()
-        return sale    
+    db.add(sale)
+    db.flush()  
+
+    for item_data in sale_item_data:
+        sale_item = SaleItem(
+            sale_id=sale.id,
+            product_id=item_data["product"].id,
+            quantity=item_data["quantity"],
+            price=item_data["price"],
+            subtotal=item_data["subtotal"],
+        )
+        db.add(sale_item)
+        adjust_stock(db, item_data["product"], -item_data["quantity"])
+
+    db.commit()
+    db.refresh(sale)
+
+    sale = (
+        db.query(Sale)
+        .options(
+            joinedload(Sale.items).joinedload(SaleItem.product),
+            joinedload(Sale.employee),
+        )
+        .filter(Sale.id == sale.id)
+        .first()
+    )
+    return sale  
     
     
     
