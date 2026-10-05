@@ -10,7 +10,7 @@ from app.models.user import User, UserRole
 from app.schemas.expense import ExpenseCreate, ExpenseUpdate
 
 
-def create_expense(db: Session, data: ExpenseCreate, current_user: User) -> Expense:
+def create_expense(db: Session, data: ExpenseCreate, current_user: User):
     expense = Expense(
         shop_id=current_user.shop_id,
         recorded_by_id=current_user.id,
@@ -24,11 +24,7 @@ def create_expense(db: Session, data: ExpenseCreate, current_user: User) -> Expe
     db.refresh(expense)
 
     return (
-        db.query(Expense)
-        .options(joinedload(Expense.recorded_by))
-        .filter(Expense.id == expense.id)
-        .first()
-    )
+        db.query(Expense).options(joinedload(Expense.recorded_by)) .filter(Expense.id == expense.id) .first())
 
 
 def get_expenses(
@@ -36,8 +32,7 @@ def get_expenses(
     current_user: User,
     target_date: Optional[date] = None,
     category: Optional[ExpenseCategory] = None,
-    my_only: bool = False,
-) -> List[Expense]:
+    my_only: bool = False,):
     if target_date is None:
         target_date = datetime.now(timezone.utc).date()
 
@@ -64,17 +59,10 @@ def get_expenses(
     return query.order_by(Expense.created_at.desc()).all()
 
 
-def get_expense(db: Session, expense_id: int, current_user: User) -> Expense:
-    expense = (
-        db.query(Expense)
-        .options(joinedload(Expense.recorded_by))
-        .filter(
-            Expense.id == expense_id,
-            Expense.shop_id == current_user.shop_id,
+def get_expense(db: Session, expense_id: int, current_user: User):
+    expense = (db.query(Expense).options(joinedload(Expense.recorded_by)) .filter(Expense.id == expense_id, Expense.shop_id == current_user.shop_id,
             Expense.is_active == True,
-        )
-        .first()
-    )
+        ) .first())
     if not expense:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
 
@@ -87,8 +75,7 @@ def get_expense(db: Session, expense_id: int, current_user: User) -> Expense:
 
 
 def update_expense(
-    db: Session, expense_id: int, data: ExpenseUpdate, current_user: User
-) -> Expense:
+    db: Session, expense_id: int, data: ExpenseUpdate, current_user: User):
     expense = get_expense(db, expense_id, current_user)
 
     if current_user.role == UserRole.EMPLOYEE and expense.recorded_by_id != current_user.id:
@@ -119,17 +106,8 @@ def delete_expense(db: Session, expense_id: int, current_user: User) -> None:
     db.commit()
 
 
-def get_daily_expense_summary(
-    db: Session,
-    current_user: User,
-    target_date: Optional[date] = None,
-) -> Tuple[List[Expense], Decimal, int, str, list]:
-    expenses = get_expenses(
-        db,
-        current_user,
-        target_date=target_date,
-        my_only=(current_user.role == UserRole.EMPLOYEE),
-    )
+def get_daily_expense_summary(db: Session,current_user: User,target_date: Optional[date] = None,):
+    expenses = get_expenses(db,current_user,target_date=target_date,my_only=(current_user.role == UserRole.EMPLOYEE))
 
     if target_date is None:
         target_date = datetime.now(timezone.utc).date()

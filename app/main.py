@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routers import auth,products,user,sales,shop,expense
+from app.routers import auth,products,user,sales,shop,expense,subscription
 from .core.database import engine,Base
 
 
@@ -18,6 +18,7 @@ app.include_router(products.router)
 app.include_router(sales.router)
 app.include_router(shop.router)
 app.include_router(expense.router)
+app. include_router(subscription.router)
 
 
 

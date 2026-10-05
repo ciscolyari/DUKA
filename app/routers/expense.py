@@ -35,22 +35,13 @@ def _to_response(expense) -> ExpenseResponse:
 
 
 @router.post("", response_model=ExpenseResponse, status_code=201)
-def create_expense(
-    data: ExpenseCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def create_expense(data: ExpenseCreate,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
     expense = expense_service.create_expense(db, data, current_user)
     return _to_response(expense)
 
 
 @router.get("", response_model=List[ExpenseResponse])
-def list_expenses(
-    target_date: Optional[date] = Query(None),
-    category: Optional[ExpenseCategory] = Query(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def list_expenses( target_date: Optional[date] = Query(None), category: Optional[ExpenseCategory] = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user),):
     expenses = expense_service.get_expenses(
         db, current_user, target_date=target_date, category=category
     )
@@ -58,49 +49,28 @@ def list_expenses(
 
 
 @router.get("/summary", response_model=ExpenseDailySummary)
-def expense_summary(
-    target_date: Optional[date] = Query(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def expense_summary(target_date: Optional[date] = Query(None),db: Session = Depends(get_db), current_user: User = Depends(get_current_user),):
     expenses, total, count, date_str, by_category = (
         expense_service.get_daily_expense_summary(db, current_user, target_date)
     )
-    return ExpenseDailySummary(
-        date=date_str,
-        total_expenses=total,
-        total_count=count,
-        by_category=by_category,
-        expenses=[_to_response(e) for e in expenses],
-    )
+    return ExpenseDailySummary(  date=date_str,
+        total_expenses=total,total_count=count,
+        by_category=by_category,expenses=[_to_response(e) for e in expenses],)
 
 
 @router.get("/{expense_id}", response_model=ExpenseResponse)
-def get_expense(
-    expense_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def get_expense( expense_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     expense = expense_service.get_expense(db, expense_id, current_user)
     return _to_response(expense)
 
 
 @router.put("/{expense_id}", response_model=ExpenseResponse)
-def update_expense(
-    expense_id: int,
-    data: ExpenseUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def update_expense( expense_id: int, data: ExpenseUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user),):
     expense = expense_service.update_expense(db, expense_id, data, current_user)
     return _to_response(expense)
 
 
 @router.delete("/{expense_id}", status_code=204)
-def delete_expense(
-    expense_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def delete_expense(expense_id: int,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
     expense_service.delete_expense(db, expense_id, current_user)
     return None
