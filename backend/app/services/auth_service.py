@@ -5,7 +5,7 @@ from app.core.security import hash_password, verify_password, create_access_toke
 from app.models.user import User, UserRole
 from app.models.shop import Shop
 from app.schemas.auth import AdminRegisterRequest, LoginRequest,TokenData
-from app.services.subscription_service import start_trial
+from app.services.subscription_service import create_trial
 
 
 def register_admin(db: Session, data: AdminRegisterRequest):
@@ -18,7 +18,7 @@ def register_admin(db: Session, data: AdminRegisterRequest):
         name=data.shop_name,
         location=data.location
     )
-    start_trial(shop)   # ← trial 14 days
+    create_trial(shop)   # ← trial 14 days
 
     db.add(shop)
     db.flush()

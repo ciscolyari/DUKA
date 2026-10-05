@@ -1,77 +1,53 @@
 from datetime import datetime, timezone
 import enum
-from sqlalchemy import (
-    Column, Integer, String, DateTime, Boolean, Text,
-    ForeignKey, Enum, Numeric, JSON,
-)
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Enum, Numeric
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
-class BillingInterval(str, enum.Enum):
-    DAILY = "daily"
-    WEEKLY = "weekly"
-    MONTHLY = "monthly"
-    YEARLY = "yearly"
+class SubscriptionPlan(str, enum.Enum):
+    TRIAL = "trial"
+    BASIC = "basic"
+    STANDARD = "standard"
+    PREMIUM = "premium"
 
 
 class SubscriptionStatus(str, enum.Enum):
-    PENDING = "pending"
     ACTIVE = "active"
     EXPIRED = "expired"
     CANCELLED = "cancelled"
 
 
-STATUS_TRANSITIONS = {
-    SubscriptionStatus.PENDING: {SubscriptionStatus.ACTIVE, SubscriptionStatus.CANCELLED},
-    SubscriptionStatus.ACTIVE: {SubscriptionStatus.EXPIRED, SubscriptionStatus.CANCELLED},
-    SubscriptionStatus.EXPIRED: {SubscriptionStatus.ACTIVE, SubscriptionStatus.CANCELLED},
-    SubscriptionStatus.CANCELLED: {SubscriptionStatus.ACTIVE},
+PLAN_LIMITS = {
+    SubscriptionPlan.TRIAL:    {"max_employees": 2,  "max_products": 50,    "days": 14, "price": 0},
+    SubscriptionPlan.BASIC:    {"max_employees": 5,  "max_products": 200,   "days": 30, "price": 15000},
+    SubscriptionPlan.STANDARD: {"max_employees": 15, "max_products": 1000,  "days": 30, "price": 35000},
+    SubscriptionPlan.PREMIUM:  {"max_employees": 50, "max_products": 10000, "days": 30, "price": 75000},
 }
-
-
-class SubscriptionPlan(Base):
-    __tablename__ = "subscription_plans"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False, unique=True)
-    description = Column(Text, nullable=True)
-    price = Column(Numeric(12, 2), nullable=False, default=0)
-    currency = Column(String(10), nullable=False, default="TZS")
-    duration_days = Column(Integer, nullable=False, default=30)
-    billing_interval = Column(Enum(BillingInterval), nullable=False, default=BillingInterval.MONTHLY)
-    features = Column(JSON, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False,
-    )
-
-    subscriptions = relationship("Subscription", back_populates="plan")
 
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
-    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=False, index=True)
-    plan_id = Column(Integer, ForeignKey("subscription_plans.id"), nullable=False, index=True)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=False, unique=True, index=True)
 
-    status = Column(Enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.PENDING)
+    plan = Column(Enum(SubscriptionPlan), nullable=False, default=SubscriptionPlan.TRIAL)
+    status = Column(Enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.ACTIVE)
+
     starts_at = Column(DateTime(timezone=True), nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=True)
-    is_current = Column(Boolean, default=False, nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
 
     amount_paid = Column(Numeric(12, 2), nullable=True)
     payment_ref = Column(String(255), nullable=True)
-    notes = Column(Text, nullable=True)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
     updated_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -79,8 +55,7 @@ class Subscription(Base):
         nullable=False,
     )
 
-    shop = relationship("Shop", back_populates="subscriptions")
-    plan = relationship("SubscriptionPlan", back_populates="subscriptions")
+    shop = relationship("Shop", back_populates="subscription")
 
     def is_valid(self) -> bool:
         if self.status != SubscriptionStatus.ACTIVE:
