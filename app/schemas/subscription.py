@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+from decimal import Decimal
 from datetime import datetime
 from app.models.shop import SubscriptionPlan, SubscriptionStatus
 
@@ -16,6 +17,13 @@ class SubscriptionResponse(BaseModel):
     max_employees: int
     max_products: int
     last_payment_ref: Optional[str] = None
+    
+    
+class ActivateSubscriptionRequest(BaseModel):
+    plan: SubscriptionPlan = SubscriptionPlan.BASIC
+    payment_ref: Optional[str] = None
+    amount_paid: Optional[Decimal] = None
+    days: Optional[int] = None
 
 
 class ActivateSubscriptionRequest(BaseModel):

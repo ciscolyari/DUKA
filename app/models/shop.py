@@ -67,7 +67,7 @@ class Shop(Base):
     users = relationship("User", back_populates="shop", cascade="all, delete-orphan")
     products = relationship("Product", back_populates="shop", cascade="all, delete-orphan")
     sales = relationship("Sale", back_populates="shop", cascade="all, delete-orphan")
-    
+    subscription = relationship("Subscription",back_populates="shop")
     
     
     def is_subscription_active(self) -> bool:
