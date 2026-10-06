@@ -3,175 +3,405 @@ from decimal import Decimal
 from typing import List
 
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
-from app.models.shop import Shop
 from app.models.subscription import (
-    Subscription,
     SubscriptionPlan,
+    Subscription,
     SubscriptionStatus,
-    PLAN_LIMITS,
+    STATUS_TRANSITIONS,
 )
-from app.models.user import User
-from app.schemas.subscription import ActivateSubscriptionRequest
+from app.models.user import User, UserRole
+from app.schemas.subscription import (
+    PlanCreate,
+    PlanUpdate,
+    SubscribeRequest,
+    ChangePlanRequest,
+    SubscriptionStatusUpdate,
+)
 from app.services.billing_service import create_billing_and_invoice
 
 
-def create_trial(db: Session, shop_id: int) -> Subscription:
-    """Unda trial wakati wa register."""
+def _to_sub_dict(sub: Subscription) -> dict:
+    return {
+        "id": sub.id,
+        "shop_id": sub.shop_id,
+        "plan_id": sub.plan_id,
+        "plan_name": sub.plan.name if sub.plan else None,
+        "status": sub.status,
+        "starts_at": sub.starts_at,
+        "expires_at": sub.expires_at,
+        "days_remaining": sub.days_remaining(),
+        "is_valid": sub.is_valid(),
+        "is_current": sub.is_current,
+        "amount_paid": sub.amount_paid,
+        "payment_ref": sub.payment_ref,
+        "notes": sub.notes,
+        "created_at": sub.created_at,
+    }
+
+
+# ===================== PLANS =====================
+
+def create_plan(db: Session, data: PlanCreate, current_admin: User):
+    if current_admin.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    exists = db.query(SubscriptionPlan).filter(SubscriptionPlan.name == data.name).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Plan name already exists")
+
+    plan = SubscriptionPlan(
+        name=data.name,
+        description=data.description,
+        price=data.price,
+        currency=data.currency,
+        duration_days=data.duration_days,
+        billing_interval=data.billing_interval,
+        features=data.features,
+        is_active=data.is_active,
+    )
+    db.add(plan)
+    db.commit()
+    db.refresh(plan)
+    return plan
+
+
+def list_plans(db: Session, active_only: bool = False):
+    q = db.query(SubscriptionPlan)
+    if active_only:
+        q = q.filter(SubscriptionPlan.is_active == True)
+    return q.order_by(SubscriptionPlan.price.asc()).all()
+
+
+def get_plan(db: Session, plan_id: int):
+    plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return plan
+
+
+def update_plan(db: Session, plan_id: int, data: PlanUpdate, current_admin: User):
+    if current_admin.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    plan = get_plan(db, plan_id)
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(plan, field, value)
+    db.commit()
+    db.refresh(plan)
+    return plan
+
+
+def set_plan_status(db: Session, plan_id: int, is_active: bool, current_admin: User):
+    if current_admin.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    plan = get_plan(db, plan_id)
+    plan.is_active = is_active
+    db.commit()
+    db.refresh(plan)
+    return plan
+
+
+# ===================== SUBSCRIPTIONS =====================
+
+def create_trial_for_shop(db: Session, shop_id: int):
+    trial = (
+        db.query(SubscriptionPlan)
+        .filter(SubscriptionPlan.name.ilike("trial"))
+        .first()
+    )
+    if not trial:
+        trial = SubscriptionPlan(
+            name="Trial",
+            description="Jaribio la siku 14 — bure",
+            price=0,
+            currency="TZS",
+            duration_days=14,
+            features={"max_employees": 2, "max_products": 50},
+            is_active=True,
+        )
+        db.add(trial)
+        db.flush()
+
     now = datetime.now(timezone.utc)
     sub = Subscription(
         shop_id=shop_id,
-        plan=SubscriptionPlan.TRIAL,
+        plan_id=trial.id,
         status=SubscriptionStatus.ACTIVE,
         starts_at=now,
-        expires_at=now + timedelta(days=14),
+        expires_at=now + timedelta(days=trial.duration_days),
+        is_current=True,
         amount_paid=0,
     )
     db.add(sub)
     return sub
 
 
-def get_subscription(db: Session, current_admin: User) -> dict:
-    shop = db.query(Shop).filter(Shop.id == current_admin.shop_id).first()
-    if not shop:
-        raise HTTPException(status_code=404, detail="Shop not found")
+def subscribe(db: Session, data: SubscribeRequest, current_user: User):
+    plan = get_plan(db, data.plan_id)
+    if not plan.is_active:
+        raise HTTPException(status_code=400, detail="Plan is not active")
 
-    sub = (
-        db.query(Subscription)
-        .filter(Subscription.shop_id == current_admin.shop_id)
-        .first()
-    )
-    if not sub:
-        raise HTTPException(status_code=404, detail="Subscription not found")
+    db.query(Subscription).filter(
+        Subscription.shop_id == current_user.shop_id,
+        Subscription.is_current == True,
+    ).update({"is_current": False})
 
-    # Auto-expire
-    if sub.status == SubscriptionStatus.ACTIVE and not sub.is_valid():
-        sub.status = SubscriptionStatus.EXPIRED
-        db.commit()
-        db.refresh(sub)
-
-    limits = PLAN_LIMITS.get(sub.plan, PLAN_LIMITS[SubscriptionPlan.BASIC])
-
-    return {
-        "id": sub.id,
-        "shop_id": sub.shop_id,
-        "shop_name": shop.name,
-        "plan": sub.plan,
-        "status": sub.status,
-        "starts_at": sub.starts_at,
-        "expires_at": sub.expires_at,
-        "days_remaining": sub.days_remaining(),
-        "is_valid": sub.is_valid(),
-        "max_employees": limits["max_employees"],
-        "max_products": limits["max_products"],
-        "amount_paid": sub.amount_paid,
-        "payment_ref": sub.payment_ref,
-    }
-
-
-def activate_subscription(
-    db: Session,
-    current_admin: User,
-    data: ActivateSubscriptionRequest,
-) -> dict:
-    """
-    Activate / renew subscription.
-    Baada ya success → unda Billing + Invoice.
-    """
-    sub = (
-        db.query(Subscription)
-        .filter(Subscription.shop_id == current_admin.shop_id)
-        .first()
-    )
-    if not sub:
-        raise HTTPException(status_code=404, detail="Subscription not found")
-
-    limits = PLAN_LIMITS.get(data.plan, PLAN_LIMITS[SubscriptionPlan.BASIC])
-    days = data.days if data.days else limits["days"]
     now = datetime.now(timezone.utc)
+    amount = data.amount_paid if data.amount_paid is not None else plan.price
 
-    # Kama bado valid → ongeza siku; else anza upya
-    if sub.is_valid() and sub.expires_at:
-        base = sub.expires_at
-        if base.tzinfo is None:
-            base = base.replace(tzinfo=timezone.utc)
-        if base < now:
-            base = now
-    else:
-        base = now
+    sub = Subscription(
+        shop_id=current_user.shop_id,
+        plan_id=plan.id,
+        status=SubscriptionStatus.ACTIVE if amount == 0 else SubscriptionStatus.PENDING,
+        starts_at=now if amount == 0 else None,
+        expires_at=(now + timedelta(days=plan.duration_days)) if amount == 0 else None,
+        is_current=True,
+        amount_paid=amount,
+        payment_ref=data.payment_ref,
+        notes=data.notes,
+    )
 
-    # 1. Sasisha subscription
-    sub.plan = data.plan
-    sub.status = SubscriptionStatus.ACTIVE
-    sub.starts_at = now
-    sub.expires_at = base + timedelta(days=days)
+    if amount and Decimal(str(amount)) > 0 and data.payment_ref:
+        sub.status = SubscriptionStatus.ACTIVE
+        sub.starts_at = now
+        sub.expires_at = now + timedelta(days=plan.duration_days)
 
-    if data.payment_ref:
-        sub.payment_ref = data.payment_ref
+    db.add(sub)
+    db.flush()
 
-    if data.amount_paid is not None:
-        sub.amount_paid = data.amount_paid
-    else:
-        sub.amount_paid = limits.get("price", 0)
-
-    # 2. Unda Billing + Invoice (kama kuna malipo)
-    amount = Decimal(str(sub.amount_paid or 0))
-    if amount > 0:
+    if sub.status == SubscriptionStatus.ACTIVE and Decimal(str(amount or 0)) > 0:
         create_billing_and_invoice(
             db,
             shop_id=sub.shop_id,
             subscription_id=sub.id,
-            paid_by_id=current_admin.id,
-            plan=sub.plan.value,
-            amount=amount,
-            currency="TZS",
+            paid_by_id=current_user.id,
+            plan=plan.name,
+            amount=Decimal(str(amount)),
+            currency=plan.currency,
             transaction_ref=data.payment_ref,
         )
 
     db.commit()
     db.refresh(sub)
-    return get_subscription(db, current_admin)
-
-
-def list_plans() -> List[dict]:
-    descriptions = {
-        SubscriptionPlan.TRIAL: "Jaribio siku 14 — bure",
-        SubscriptionPlan.BASIC: "Plan ya msingi",
-        SubscriptionPlan.STANDARD: "Plan ya kati",
-        SubscriptionPlan.PREMIUM: "Plan kamili",
-    }
-    return [
-        {
-            "plan": plan,
-            "max_employees": lim["max_employees"],
-            "max_products": lim["max_products"],
-            "days": lim["days"],
-            "price": lim["price"],
-            "description": descriptions[plan],
-        }
-        for plan, lim in PLAN_LIMITS.items()
-    ]
-
-
-def require_active_subscription(db: Session, current_user: User):
     sub = (
         db.query(Subscription)
-        .filter(Subscription.shop_id == current_user.shop_id)
+        .options(joinedload(Subscription.plan))
+        .filter(Subscription.id == sub.id)
+        .first()
+    )
+    return _to_sub_dict(sub)
+
+
+def get_current_subscription(db: Session, current_user: User):
+    sub = (
+        db.query(Subscription)
+        .options(joinedload(Subscription.plan))
+        .filter(
+            Subscription.shop_id == current_user.shop_id,
+            Subscription.is_current == True,
+            Subscription.is_active == True,
+        )
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=404, detail="No current subscription")
+
+    if sub.status == SubscriptionStatus.ACTIVE and not sub.is_valid():
+        sub.status = SubscriptionStatus.EXPIRED
+        db.commit()
+        db.refresh(sub)
+
+    return _to_sub_dict(sub)
+
+
+def list_subscriptions(db: Session, current_user: User):
+    rows = (
+        db.query(Subscription)
+        .options(joinedload(Subscription.plan))
+        .filter(
+            Subscription.shop_id == current_user.shop_id,
+            Subscription.is_active == True,
+        )
+        .order_by(Subscription.created_at.desc())
+        .all()
+    )
+    return [_to_sub_dict(s) for s in rows]
+
+
+def get_subscription(db: Session, subscription_id: int, current_user: User):
+    sub = (
+        db.query(Subscription)
+        .options(joinedload(Subscription.plan))
+        .filter(
+            Subscription.id == subscription_id,
+            Subscription.shop_id == current_user.shop_id,
+            Subscription.is_active == True,
+        )
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    return _to_sub_dict(sub)
+
+
+def update_subscription_status(
+    db: Session,
+    subscription_id: int,
+    data: SubscriptionStatusUpdate,
+    current_user: User,
+):
+    sub = (
+        db.query(Subscription)
+        .options(joinedload(Subscription.plan))
+        .filter(
+            Subscription.id == subscription_id,
+            Subscription.shop_id == current_user.shop_id,
+            Subscription.is_active == True,
+        )
         .first()
     )
     if not sub:
         raise HTTPException(status_code=404, detail="Subscription not found")
 
+    allowed = STATUS_TRANSITIONS.get(sub.status, set())
+    if data.status not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot change from {sub.status.value} to {data.status.value}",
+        )
+
+    sub.status = data.status
+    if data.notes:
+        sub.notes = data.notes
+
+    if data.status == SubscriptionStatus.ACTIVE and not sub.starts_at:
+        now = datetime.now(timezone.utc)
+        sub.starts_at = now
+        days = sub.plan.duration_days if sub.plan else 30
+        sub.expires_at = now + timedelta(days=days)
+
+    db.commit()
+    db.refresh(sub)
+    return _to_sub_dict(sub)
+
+
+def change_plan(
+    db: Session,
+    subscription_id: int,
+    data: ChangePlanRequest,
+    current_user: User,
+):
+    current = (
+        db.query(Subscription)
+        .options(joinedload(Subscription.plan))
+        .filter(
+            Subscription.id == subscription_id,
+            Subscription.shop_id == current_user.shop_id,
+            Subscription.is_active == True,
+        )
+        .first()
+    )
+    if not current:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    new_plan = get_plan(db, data.new_plan_id)
+    if not new_plan.is_active:
+        raise HTTPException(status_code=400, detail="New plan is not active")
+    if current.plan_id == new_plan.id:
+        raise HTTPException(status_code=400, detail="Already on this plan")
+
+    current.is_current = False
+    if current.status == SubscriptionStatus.ACTIVE:
+        current.status = SubscriptionStatus.CANCELLED
+
+    now = datetime.now(timezone.utc)
+    amount = data.amount_paid if data.amount_paid is not None else new_plan.price
+
+    new_sub = Subscription(
+        shop_id=current_user.shop_id,
+        plan_id=new_plan.id,
+        status=SubscriptionStatus.ACTIVE,
+        starts_at=now,
+        expires_at=now + timedelta(days=new_plan.duration_days),
+        is_current=True,
+        amount_paid=amount,
+        payment_ref=data.payment_ref,
+        notes=data.notes or f"Changed from plan_id={current.plan_id}",
+    )
+    db.add(new_sub)
+    db.flush()
+
+    if Decimal(str(amount or 0)) > 0:
+        create_billing_and_invoice(
+            db,
+            shop_id=new_sub.shop_id,
+            subscription_id=new_sub.id,
+            paid_by_id=current_user.id,
+            plan=new_plan.name,
+            amount=Decimal(str(amount)),
+            currency=new_plan.currency,
+            transaction_ref=data.payment_ref,
+        )
+
+    db.commit()
+    db.refresh(new_sub)
+    new_sub = (
+        db.query(Subscription)
+        .options(joinedload(Subscription.plan))
+        .filter(Subscription.id == new_sub.id)
+        .first()
+    )
+    return _to_sub_dict(new_sub)
+
+
+def available_plans_for_change(db: Session, subscription_id: int, current_user: User):
+    sub = (
+        db.query(Subscription)
+        .filter(
+            Subscription.id == subscription_id,
+            Subscription.shop_id == current_user.shop_id,
+        )
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    return (
+        db.query(SubscriptionPlan)
+        .filter(
+            SubscriptionPlan.is_active == True,
+            SubscriptionPlan.id != sub.plan_id,
+        )
+        .order_by(SubscriptionPlan.price.asc())
+        .all()
+    )
+
+
+def require_active_subscription(db: Session, current_user: User):
+    sub = (
+        db.query(Subscription)
+        .options(joinedload(Subscription.plan))
+        .filter(
+            Subscription.shop_id == current_user.shop_id,
+            Subscription.is_current == True,
+            Subscription.is_active == True,
+        )
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=404, detail="No subscription found")
+
     if not sub.is_valid():
         if sub.status == SubscriptionStatus.ACTIVE:
             sub.status = SubscriptionStatus.EXPIRED
             db.commit()
-
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail={
-                "message": "Your subscription has expired. Please renew.",
+                "message": "Subscription has expired. Please renew.",
                 "status": sub.status.value,
                 "expires_at": sub.expires_at.isoformat() if sub.expires_at else None,
             },
