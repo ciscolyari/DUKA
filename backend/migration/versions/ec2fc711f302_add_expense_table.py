@@ -1,9 +1,5 @@
-"""fix user role enum and remove product role
-
-Revision ID: 75338a628c7b
-Revises: ec2fc711f302
-Create Date: 2026-09-26
-"""
+"""fix user role enum and remove product role"""
+"""add expenses table"""
 
 from typing import Sequence, Union
 
@@ -11,15 +7,14 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "75338a628c7b"
-down_revision: Union[str, None] = "ec2fc711f302"
+# revision identifiers, used by Alembic.
+revision: str = "ec2fc711f302"
+down_revision: Union[str, None] = "a1b25283bc14"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-
 def upgrade() -> None:
-
-    # Create the PostgreSQL enum if it does not already exist.
+    # Create userrole enum if it does not already exist
     op.execute("""
         DO $$
         BEGIN
@@ -34,67 +29,57 @@ def upgrade() -> None:
         $$;
     """)
 
-    # Remove the old VARCHAR default.
+    # Remove default from users.role before changing its type
     op.execute("""
         ALTER TABLE users
         ALTER COLUMN role DROP DEFAULT
     """)
 
-    # Convert users.role from VARCHAR to PostgreSQL ENUM.
+    # Change users.role to userrole enum
     op.execute("""
         ALTER TABLE users
         ALTER COLUMN role TYPE userrole
         USING role::text::userrole
     """)
 
-    # Set the new ENUM default.
+    # Set default employee
     op.execute("""
         ALTER TABLE users
-        ALTER COLUMN role
-        SET DEFAULT 'employee'::userrole
+        ALTER COLUMN role SET DEFAULT 'employee'::userrole
     """)
 
-    # Product does not have a role in the current model.
+    # Remove products.role only if it exists
     op.execute("""
-    ALTER TABLE products
-    DROP COLUMN IF EXISTS role
-""")
+        ALTER TABLE products
+        DROP COLUMN IF EXISTS role
+    """)
 
 
 def downgrade() -> None:
+    # Restore products.role only if needed
+    op.add_column(
+        "products",
+        sa.Column(
+            "role",
+            sa.String(),
+            nullable=True,
+        ),
+    )
 
-    # Remove ENUM default.
+    # Remove default from users.role
     op.execute("""
         ALTER TABLE users
         ALTER COLUMN role DROP DEFAULT
     """)
 
-    # Convert ENUM back to VARCHAR.
+    # Change users.role back to VARCHAR
     op.execute("""
         ALTER TABLE users
         ALTER COLUMN role TYPE VARCHAR
         USING role::text
     """)
 
-    # Restore the old VARCHAR default.
-    op.execute("""
-        ALTER TABLE users
-        ALTER COLUMN role
-        SET DEFAULT 'employee'
-    """)
-
-    # Restore products.role.
-    op.add_column(
-        "products",
-        sa.Column(
-            "role",
-            sa.String(),
-            nullable=False,
-            server_default="product"
-        )
-    )
-
-    # Remove the ENUM type.
+    # Drop userrole enum
     op.execute("""
         DROP TYPE IF EXISTS userrole
     """)
