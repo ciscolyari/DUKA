@@ -116,16 +116,46 @@ def create_sale(db: Session, data: SaleCreate, current_user: User) -> Sale:
     
     
     
-def get_my_sales(db: Session,current_user: User,target_date: Optional[date] = None,):
-    
-    if target_date is None:
-        target_date = datetime.now(timezone.utc).date()
+def get_my_sales(
+    db: Session,
+    current_user: User,
+    target_date: Optional[date] = None,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+):
+    if from_date and to_date and from_date > to_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="from_date must be on or before to_date",
+        )
 
-    start = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-    end = datetime.combine(target_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+    query = (
+        db.query(Sale)
+        .options(
+            joinedload(Sale.items).joinedload(SaleItem.product),
+            joinedload(Sale.employee),
+        )
+        .filter(
+            Sale.employee_id == current_user.id,
+            Sale.shop_id == current_user.shop_id,
+            Sale.status == SaleStatus.SUBMITTED,
+        )
+    )
 
-    sales = db.query(Sale).options( joinedload(Sale.items).joinedload(SaleItem.product),joinedload(Sale.employee),).filter(Sale.employee_id == current_user.id,Sale.shop_id == current_user.shop_id,Sale.created_at >= start,Sale.created_at <= end,Sale.status == SaleStatus.SUBMITTED,).order_by(Sale.created_at.desc()).all()    
-    return sales
+    if from_date or to_date:
+        if from_date:
+            start = datetime.combine(from_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+            query = query.filter(Sale.created_at >= start)
+        if to_date:
+            end = datetime.combine(to_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+            query = query.filter(Sale.created_at <= end)
+    else:
+        target_date = target_date or datetime.now(timezone.utc).date()
+        start = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        end = datetime.combine(target_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+        query = query.filter(Sale.created_at >= start, Sale.created_at <= end)
+
+    return query.order_by(Sale.created_at.desc()).all()
         
         
         

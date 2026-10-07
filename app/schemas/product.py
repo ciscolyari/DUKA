@@ -6,7 +6,6 @@ from datetime import datetime
 
 class Product(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    shop_id:int
     description: Optional[str] = None
     #sku:Optional[str] = Field(None, max_length=100)
     selling_price: Decimal =Field(gt=0)
@@ -40,6 +39,7 @@ class Response(BaseModel):
     #sku: Optional[str]
     selling_price: Decimal
     stock_quantity: int
+    low_stock: Optional[int] = None
     #low_stock: bool= False
     active:bool
     created_at:datetime

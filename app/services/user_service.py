@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from fastapi import Depends,HTTPException, status
+from fastapi import HTTPException, status
 from app.models.user import User, UserRole
 from app.core.security import hash_password
 from app.schemas.user import createuser,UserUpdate
@@ -13,7 +13,7 @@ def create_employee(db: Session, data: createuser, current_admin:User):
                             detail="create employee account")
     existing = db.query(User).filter(User.email==data.email).first()
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email already existing")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")
     
     employee=User(
         shop_id= current_admin.shop_id,
@@ -49,6 +49,16 @@ def get_employee(db: Session, employee_id: int,current_admin: User):
 def update_employee(db: Session, employee_id: int, data:UserUpdate, current_admin: User):
     employee = get_employee(db, employee_id, current_admin)
     update_data = data.model_dump(exclude_unset= True)
+    if "email" in update_data:
+        existing = db.query(User).filter(
+            User.email == update_data["email"],
+            User.id != employee_id,
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already exists",
+            )
     if "password" in update_data:
         plain_password = update_data.pop("password")
         update_data["hashed_password"] = hash_password(plain_password)
@@ -67,4 +77,30 @@ def destroy(db:Session, employee_id: int, current_admin: User):
     employee.active = False
     db.commit()
     db.refresh(employee)
-    return employee        
+    return employee
+
+
+def reset_employee_password(
+    db: Session,
+    employee_id: int,
+    new_password: str,
+    current_admin: User,
+):
+    employee = get_employee(db, employee_id, current_admin)
+    employee.hashed_password = hash_password(new_password)
+    db.commit()
+    db.refresh(employee)
+    return employee
+
+
+def set_employee_active(
+    db: Session,
+    employee_id: int,
+    is_active: bool,
+    current_admin: User,
+):
+    employee = get_employee(db, employee_id, current_admin)
+    employee.active = is_active
+    db.commit()
+    db.refresh(employee)
+    return employee

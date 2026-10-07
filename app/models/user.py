@@ -1,5 +1,6 @@
 import enum
 from datetime import datetime, timezone
+from typing import Optional
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey,Enum
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -25,3 +26,8 @@ class User(Base):
     role = Column(Enum(UserRole,values_callable=lambda enum_class: [member.value for member in enum_class],name="userrole"),nullable=False,default=UserRole.EMPLOYEE)
     shop = relationship("Shop", back_populates="users")
     sales = relationship("Sale", back_populates="employee")
+    expenses = relationship("Expense", back_populates="recorded_by")
+
+    @property
+    def shop_name(self) -> Optional[str]:
+        return self.shop.name if self.shop else None

@@ -54,3 +54,4 @@ class Expense(Base):
 
     shop = relationship("Shop", backref="expenses")
     recorded_by = relationship("User", backref="expenses")
+    recorded_by = relationship("User", back_populates="expenses")

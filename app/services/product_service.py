@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from typing import Optional
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from app.models.product import Product
 from app.schemas.product import productcreate,Restock,productUpdate
 from app.models.user import User
@@ -30,7 +31,7 @@ def createProduct(db:Session, data:productcreate, current_user: User):
 def get_products(db: Session,current_user: User,active_only : bool = True,
     search:Optional[str]=None,
     low_stock_only:bool = False,
-    
+    out_of_stock_only: bool = False,
 ):
     query = db.query(Product).filter(Product.shop_id == current_user.shop_id)
     if active_only:
@@ -38,10 +39,11 @@ def get_products(db: Session,current_user: User,active_only : bool = True,
     if search:
         term = f"%{search.strip()}%"
         query = query.filter((Product.name.ilike(term)))
-    products = query.order_by(Product.name).all()    
     if low_stock_only:
-        products = [p for p in products if p.low_stock]   
-    return products
+        query = query.filter(Product.stock_quantity <= func.coalesce(Product.low_stock, 0))
+    if out_of_stock_only:
+        query = query.filter(Product.stock_quantity == 0)
+    return query.order_by(Product.name).all()
 
 
 
@@ -63,7 +65,7 @@ def update_product(db: Session, product_id: int, data: productUpdate, current_us
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=f"Product '{update_data['name']}' already exists in this shop",)
 
     for field, value in update_data.items():
-        setattr(product, field, value)
+        setattr(product, "Active" if field == "active" else field, value)
 
     db.commit()
     db.refresh(product)
@@ -88,7 +90,7 @@ def restock_product(db: Session, product_id: int, data: Restock, current_user: U
 
 def delete_product(db: Session, product_id: int, current_user: User):
     product = get_product(db, product_id, current_user)
-    product.active = False
+    product.Active = False
     db.commit()
     
 

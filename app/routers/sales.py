@@ -49,10 +49,12 @@ def create_sale(data: SaleCreate,db: Session = Depends(get_db),current_user: Use
 @router.get("/me", response_model=List[SaleResponse])
 def my_sales(
     target_date: Optional[date] = Query(None, description="YYYY-MM-DD (default: today)"),
+    from_date: Optional[date] = Query(None, description="Inclusive start date"),
+    to_date: Optional[date] = Query(None, description="Inclusive end date"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    sales = sale_service.get_my_sales(db, current_user, target_date)
+    sales = sale_service.get_my_sales(db, current_user, target_date, from_date, to_date)
     return [_build_sale_response(s) for s in sales]
 
 

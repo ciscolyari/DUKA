@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -41,9 +42,23 @@ def create_expense(data: ExpenseCreate,db: Session = Depends(get_db),current_use
 
 
 @router.get("", response_model=List[ExpenseResponse])
-def list_expenses( target_date: Optional[date] = Query(None), category: Optional[ExpenseCategory] = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user),):
-    expenses = expense_service.get_expenses(
-        db, current_user, target_date=target_date, category=category
+def list_expenses(
+    target_date: Optional[date] = Query(None),
+    from_date: Optional[date] = Query(None),
+    to_date: Optional[date] = Query(None),
+    category: Optional[ExpenseCategory] = Query(None),
+    min_amount: Optional[Decimal] = Query(None, ge=0),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    expenses = expense_service.get_expenses_filtered(
+        db,
+        current_user,
+        target_date=target_date,
+        category=category,
+        from_date=from_date,
+        to_date=to_date,
+        min_amount=min_amount,
     )
     return [_to_response(e) for e in expenses]
 

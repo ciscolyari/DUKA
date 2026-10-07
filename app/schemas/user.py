@@ -19,8 +19,17 @@ class createuser(userBase):
     
 class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, min_length=2, max_length=255)
+    email: Optional[EmailStr] = None
     password: Optional[str] = Field(None, min_length=6)
-    Active: Optional[bool] = None    
+    active: Optional[bool] = None
+
+
+class EmployeePasswordReset(BaseModel):
+    new_password: str = Field(min_length=6)
+
+
+class EmployeeStatusUpdate(BaseModel):
+    is_active: bool
     
 
 
@@ -37,6 +46,7 @@ class UserResponse(BaseModel):
     full_name: str
     email:EmailStr
     role:UserRole
+    shop_name: Optional[str] = None
     active: bool
     created_at: datetime
 

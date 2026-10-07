@@ -27,17 +27,21 @@ def create_expense(db: Session, data: ExpenseCreate, current_user: User):
         db.query(Expense).options(joinedload(Expense.recorded_by)) .filter(Expense.id == expense.id) .first())
 
 
-def get_expenses(
+def get_expenses_filtered(
     db: Session,
     current_user: User,
     target_date: Optional[date] = None,
     category: Optional[ExpenseCategory] = None,
-    my_only: bool = False,):
-    if target_date is None:
-        target_date = datetime.now(timezone.utc).date()
-
-    start = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-    end = datetime.combine(target_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+    my_only: bool = False,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    min_amount: Optional[Decimal] = None,
+):
+    if from_date and to_date and from_date > to_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="from_date must be on or before to_date",
+        )
 
     query = (
         db.query(Expense)
@@ -45,18 +49,47 @@ def get_expenses(
         .filter(
             Expense.shop_id == current_user.shop_id,
             Expense.is_active == True,
-            Expense.created_at >= start,
-            Expense.created_at <= end,
         )
     )
+
+    if from_date or to_date:
+        if from_date:
+            start = datetime.combine(from_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+            query = query.filter(Expense.created_at >= start)
+        if to_date:
+            end = datetime.combine(to_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+            query = query.filter(Expense.created_at <= end)
+    else:
+        target_date = target_date or datetime.now(timezone.utc).date()
+        start = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        end = datetime.combine(target_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+        query = query.filter(Expense.created_at >= start, Expense.created_at <= end)
 
     if current_user.role == UserRole.EMPLOYEE or my_only:
         query = query.filter(Expense.recorded_by_id == current_user.id)
 
     if category is not None:
         query = query.filter(Expense.category == category)
+    if min_amount is not None:
+        query = query.filter(Expense.amount >= min_amount)
 
     return query.order_by(Expense.created_at.desc()).all()
+
+
+def get_expenses(
+    db: Session,
+    current_user: User,
+    target_date: Optional[date] = None,
+    category: Optional[ExpenseCategory] = None,
+    my_only: bool = False,
+):
+    return get_expenses_filtered(
+        db,
+        current_user,
+        target_date=target_date,
+        category=category,
+        my_only=my_only,
+    )
 
 
 def get_expense(db: Session, expense_id: int, current_user: User):
@@ -107,7 +140,12 @@ def delete_expense(db: Session, expense_id: int, current_user: User) -> None:
 
 
 def get_daily_expense_summary(db: Session,current_user: User,target_date: Optional[date] = None,):
-    expenses = get_expenses(db,current_user,target_date=target_date,my_only=(current_user.role == UserRole.EMPLOYEE))
+    expenses = get_expenses(
+        db,
+        current_user,
+        target_date=target_date,
+        my_only=current_user.role == UserRole.EMPLOYEE,
+    )
 
     if target_date is None:
         target_date = datetime.now(timezone.utc).date()
