@@ -36,5 +36,9 @@ app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allo
 - `POST /auth/reset-password {token, new_password}`: 400 with a clear `detail` if the token is invalid or expired. Invalidate the token after use.
 - This needs SMTP (or an email API) configured on the backend.
 
+## Employee expenses and sale notes
+- Employees can add expenses (`POST /expenses`) but `GET /expenses` must return only their own, and `PUT/DELETE /expenses/{id}` are admin-only. Admins see every expense with `recorded_by`.
+- `POST /sales` accepts an optional `note` (max 120 chars); return it in sales lists.
+
 ## Languages (English / Kiswahili)
 A language selector sits next to the dark-mode button. The choice is saved in the browser. Translations live in `src/i18n/sw.js` (exact English text -> Kiswahili); any text not listed stays in English. Dynamic sentences use the `patterns` list in the same file. PDF reports and text coming from the backend are not translated by the UI.

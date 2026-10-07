@@ -49,7 +49,7 @@ export const sw = {
   'Add products one by one, then submit them together.': 'Ongeza bidhaa moja moja, kisha ziwasilishe pamoja.', 'Remove': 'Ondoa', 'Submit sales': 'Wasilisha mauzo', 'Submitting…': 'Inawasilisha…',
   'Submitted sales are locked and cannot be edited or deleted.': 'Mauzo yaliyowasilishwa yamefungwa na hayawezi kuhaririwa wala kufutwa.', 'Select a product first.': 'Chagua bidhaa kwanza.',
   'Quantity must be at least 1.': 'Idadi lazima iwe angalau 1.', 'Add at least one product to the list.': 'Ongeza angalau bidhaa moja kwenye orodha.', "Today's Total": 'Jumla ya Leo',
-  'You have not made any sales today.': 'Hujafanya mauzo yoyote leo.', 'Sale submitted': 'Mauzo yamewasilishwa',
+  'You have not made any sales today.': 'Hujafanya mauzo yoyote leo.', 'Sale submitted': 'Mauzo yamewasilishwa', 'My Expenses': 'Matumizi Yangu', 'Note': 'Maelezo mafupi', 'Short note (optional)': 'Maelezo mafupi (si lazima)',
   // settings & passwords
   'Admin profile': 'Wasifu wa msimamizi', 'Profile': 'Wasifu', 'Role': 'Wadhifa', 'Change password': 'Badilisha nenosiri', 'Current password': 'Nenosiri la sasa', 'New password': 'Nenosiri jipya',
   'Confirm new password': 'Thibitisha nenosiri jipya', 'Confirm password': 'Thibitisha nenosiri', 'Password changed': 'Nenosiri limebadilishwa', 'New passwords do not match': 'Nenosiri jipya hazilingani', 'Passwords do not match': 'Nenosiri hazilingani',

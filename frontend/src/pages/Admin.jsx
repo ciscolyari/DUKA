@@ -45,7 +45,7 @@ export const Sales = () => <DataPage title={t('Sales')} listFn={salesService.all
   filters={[{ name: 'date', label: t('Date'), type: 'date' }, { name: 'employee', label: t('Employee') }, { name: 'product', label: t('Product') }, { name: 'status', label: t('Status'), options: [{ value: 'submitted', label: t('Submitted') }] }]}
   columns={[{ key: 'id', label: t('Sale ID') }, { key: 'employee_name', label: t('Employee') }, { key: 'product_name', label: t('Product') }, { key: 'quantity', label: t('Qty') },
     { key: 'unit_price', label: t('Unit price'), render: (r) => money(r.unit_price) }, { key: 'total', label: t('Total'), render: (r) => money(r.total) },
-    { key: 'd', label: t('Date'), render: (r) => dateOf(r.created_at) }, { key: 't', label: t('Time'), render: (r) => timeOf(r.created_at) }, { key: 'status', label: t('Status'), render: () => <Badge kind="green">{t('🔒 Locked')}</Badge> }]} />;
+    { key: 'd', label: t('Date'), render: (r) => dateOf(r.created_at) }, { key: 't', label: t('Time'), render: (r) => timeOf(r.created_at) }, { key: 'note', label: t('Note') }, { key: 'status', label: t('Status'), render: () => <Badge kind="green">{t('🔒 Locked')}</Badge> }]} />;
 export const Employees = () => {
   const toast = useToast(); const { shop, shops } = useShop();
   const same = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
@@ -56,7 +56,7 @@ export const Employees = () => {
       { key: 'created_at', label: t('Created'), render: (r) => dateOf(r.created_at) }, { key: 'total_sales', label: t('Total sales'), render: (r) => money(r.total_sales) }]}
     extraActions={(r, reload) => <><ResetPassword emp={r} /><button className="btn sm" onClick={async () => { try { await employeeService.setActive(r.id, !r.is_active); toast(r.is_active ? t('Employee deactivated') : t('Employee activated')); reload(); } catch (e) { toast(errMsg(e), 'err'); } }}>{r.is_active ? t('Deactivate') : t('Activate')}</button></>} />;
 };
-export const Expenses = () => <DataPage title={t('Expenses (Matumizi)')} service={expenseService} canAdd canEdit canDelete canView searchKeys={['title', 'description']}
+export const Expenses = ({ employee }) => <DataPage title={employee ? t('My Expenses') : t('Expenses (Matumizi)')} service={expenseService} defaults={{ date: new Date().toISOString().slice(0, 10) }} canAdd canEdit={!employee} canDelete={!employee} canView searchKeys={['title', 'description']}
   filters={[{ name: 'from', label: t('From'), type: 'date' }, { name: 'to', label: t('To'), type: 'date' }, { name: 'category', label: t('Category'), options: cat.map((c) => ({ value: c, label: c })) }, { name: 'min_amount', label: t('Min amount'), type: 'number' }]}
   summary={(rows) => { const sum = (f) => rows.filter(f).reduce((a, r) => a + Number(r.amount), 0); const now = new Date(); const d = (r) => new Date(r.date);
     return <div className="grid4"><Stat label={t('Today')} value={money(sum((r) => d(r).toDateString() === now.toDateString()))} /><Stat label={t('This week')} value={money(sum((r) => now - d(r) < 7 * 864e5))} />

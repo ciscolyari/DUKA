@@ -6,7 +6,7 @@ import { useShop } from '../context/ShopContext';
 import ThemeToggle from '../components/ThemeToggle';
 import { Spinner } from '../components/ui';
 const ADMIN = [['dashboard','Dashboard','📊'],['shops','Shops','🏬'],['products','Products','📦'],['inventory','Inventory','🗃️'],['sales','Sales','💰'],['employees','Employees','👥'],['expenses','Expenses','🧾'],['reports','Reports','📈'],['subscription','Subscription','⭐'],['billing','Billing History','💳'],['settings','Settings','⚙️']];
-const EMP = [['dashboard','Dashboard','📊'],['products','Products','📦'],['sales/new','New Sale','🛒'],['sales','My Sales','💰'],['inventory','Inventory','🗃️'],['settings','Settings','⚙️']];
+const EMP = [['dashboard','Dashboard','📊'],['products','Products','📦'],['sales/new','New Sale','🛒'],['sales','My Sales','💰'],['expenses','My Expenses','🧾'],['inventory','Inventory','🗃️'],['settings','Settings','⚙️']];
 export default function AppLayout() {
   const { user, logout } = useAuth(); const { shops, shop, select, loaded } = useShop(); const nav = useNavigate(); const { pathname } = useLocation(); const [open, setOpen] = useState(false);
   const admin = user.role === 'admin'; const base = admin ? '/admin' : '/employee'; const items = admin ? ADMIN : EMP;
