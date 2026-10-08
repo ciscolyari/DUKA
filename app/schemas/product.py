@@ -1,4 +1,4 @@
-from pydantic import BaseModel,Field,field_validator
+from pydantic import BaseModel,Field
 from typing import Optional
 from decimal import Decimal
 from datetime import datetime
@@ -6,6 +6,7 @@ from datetime import datetime
 
 class Product(BaseModel):
     name: str = Field(min_length=1, max_length=100)
+    shop_id:int
     description: Optional[str] = None
     #sku:Optional[str] = Field(None, max_length=100)
     selling_price: Decimal =Field(gt=0)
@@ -17,20 +18,13 @@ class productcreate(Product):
 
 
 class productUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    description: Optional[str] = None
-    #sku: Optional[str] = None
-    selling_price: Optional[Decimal] = Field(None, gt=0)
-    stock_quantity: Optional[int] = Field(None, ge=0)
-    low_stock: Optional[int] = Field(None, ge=0)
-    active: Optional[bool] = None
-
-    @field_validator("name", "selling_price", "stock_quantity", mode="before")
-    @classmethod
-    def reject_null_for_required_fields(cls, value):
-        if value is None:
-            raise ValueError("This field cannot be null")
-        return value
+        name: Optional[str]= Field(None)
+        description: Optional[str] = None
+        #sku: Optional[str] = None
+        selling_price: Decimal = Field(gt=0)
+        stock_quantity: int =Field(ge=0)
+        low_stock: Optional[int] = Field(None, ge=0)
+        active: Optional[bool]=None
         
 class Restock(BaseModel):
     quantity: int =Field(gt=0)
@@ -46,7 +40,6 @@ class Response(BaseModel):
     #sku: Optional[str]
     selling_price: Decimal
     stock_quantity: int
-    low_stock: Optional[int] = None
     #low_stock: bool= False
     active:bool
     created_at:datetime

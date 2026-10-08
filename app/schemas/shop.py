@@ -5,19 +5,10 @@ from datetime import datetime
 from decimal import Decimal
 
 
-class ShopCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255)
-    location: Optional[str] = Field(None, max_length=255)
-    address: Optional[str] = Field(None, max_length=255)
-    phone: Optional[str] = Field(None, max_length=50)
-
-
 class ShopResponse(BaseModel):
     id: int
     name: str
     location: Optional[str] = None
-    address: Optional[str] = None
-    phone: Optional[str] = None
     Active: bool
     created_at: datetime
 
@@ -28,8 +19,6 @@ class ShopResponse(BaseModel):
 class ShopUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     location: Optional[str] = Field(None, max_length=255)
-    address: Optional[str] = Field(None, max_length=255)
-    phone: Optional[str] = Field(None, max_length=50)
 
 
 class ShopDashboardResponse(BaseModel):

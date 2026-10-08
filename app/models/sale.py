@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import enum
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Numeric, Enum
+from sqlalchemy import Column, Integer, DateTime, Boolean, ForeignKey, Numeric, Enum
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -18,7 +18,6 @@ class Sale(Base):
     employee_id = Column(Integer, ForeignKey("users.id",ondelete="CASCADE"))
 
     total_amount = Column(Numeric(12, 2), nullable=False)
-    note = Column(String(120), nullable=True)
     status = Column(Enum(SaleStatus), nullable=False, default=SaleStatus.SUBMITTED)
     is_locked = Column(Boolean, default=True, nullable=False)
 

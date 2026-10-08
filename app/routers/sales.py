@@ -3,7 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user, get_current_admin, get_active_shop_id
+from app.dependencies.auth import get_current_user, get_current_admin
 from app.models.user import User
 from app.schemas.sale import SaleCreate, SaleResponse, SaleItemResponse
 from app.services import sale_service
@@ -33,7 +33,6 @@ def _build_sale_response(sale) -> SaleResponse:
         total_amount=sale.total_amount,
         status=sale.status,
         is_locked=sale.is_locked,
-        note=sale.note,
         items=items,
         created_at=sale.created_at,
     )
@@ -41,13 +40,8 @@ def _build_sale_response(sale) -> SaleResponse:
 
 
 @router.post("", response_model=SaleResponse, status_code=201)
-def create_sale(
-    data: SaleCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    shop_id: int = Depends(get_active_shop_id),
-):
-    sale = sale_service.create_sale(db, data, current_user, shop_id)
+def create_sale(data: SaleCreate,db: Session = Depends(get_db),current_user: User = Depends(get_current_user),):
+    sale = sale_service.create_sale(db, data, current_user)
     return _build_sale_response(sale)
 
 
@@ -55,15 +49,10 @@ def create_sale(
 @router.get("/me", response_model=List[SaleResponse])
 def my_sales(
     target_date: Optional[date] = Query(None, description="YYYY-MM-DD (default: today)"),
-    from_date: Optional[date] = Query(None, description="Inclusive start date"),
-    to_date: Optional[date] = Query(None, description="Inclusive end date"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    shop_id: int = Depends(get_active_shop_id),
 ):
-    sales = sale_service.get_my_sales(
-        db, current_user, target_date, from_date, to_date, shop_id
-    )
+    sales = sale_service.get_my_sales(db, current_user, target_date)
     return [_build_sale_response(s) for s in sales]
 
 
@@ -74,12 +63,9 @@ def list_all_sales(
     employee_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin),
-    shop_id: int = Depends(get_active_shop_id),
 ):
    
-    sales = sale_service.get_all_sales(
-        db, current_admin, target_date, employee_id, shop_id
-    )
+    sales = sale_service.get_all_sales(db, current_admin, target_date, employee_id)
     return [_build_sale_response(s) for s in sales]
 
 
@@ -89,10 +75,9 @@ def get_sale(
     sale_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    shop_id: int = Depends(get_active_shop_id),
 ):
   
-    sale = sale_service.get_sale(db, sale_id, current_user, shop_id)
+    sale = sale_service.get_sale(db, sale_id, current_user)
     return _build_sale_response(sale)
 
 
@@ -102,10 +87,9 @@ def update_sale(
     sale_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    shop_id: int = Depends(get_active_shop_id),
 ):
    
-    sale_service.update_sale(db, sale_id, current_user, shop_id)
+    sale_service.update_sale(db, sale_id, current_user)
 
 
 
@@ -114,10 +98,9 @@ def delete_sale(
     sale_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    shop_id: int = Depends(get_active_shop_id),
 ):
    
-    sale_service.delete_sale(db, sale_id, current_user, shop_id)
+    sale_service.delete_sale(db, sale_id, current_user)
 
 
 
@@ -126,8 +109,7 @@ def cancel_sale(
     sale_id: int,
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin),
-    shop_id: int = Depends(get_active_shop_id),
 ):
    
-    sale = sale_service.cancel_sale(db, sale_id, current_admin, shop_id)
+    sale = sale_service.cancel_sale(db, sale_id, current_admin)
     return _build_sale_response(sale)

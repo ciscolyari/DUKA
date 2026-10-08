@@ -1,5 +1,4 @@
 from datetime import date
-from decimal import Decimal
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -21,26 +20,15 @@ router = APIRouter(prefix="/api/expenses", tags=["Expenses"])
 
 
 def _to_response(expense) -> ExpenseResponse:
-    recorded_by_name = expense.recorded_by.full_name if getattr(expense, 'recorded_by', None) else None
-    payment_method = None
-    if expense.notes:
-        for line in str(expense.notes).split(';'):
-            if line.lower().startswith('payment method:'):
-                payment_method = line.split(':', 1)[1].strip()
-                break
     return ExpenseResponse(
         id=expense.id,
         shop_id=expense.shop_id,
         recorded_by_id=expense.recorded_by_id,
-        recorded_by_name=recorded_by_name,
-        recorded_by=recorded_by_name,
-        title=expense.description,
+        recorded_by_name=expense.recorded_by.full_name if expense.recorded_by else None,
         category=expense.category,
         description=expense.description,
-        date=expense.created_at,
         amount=expense.amount,
         notes=expense.notes,
-        payment_method=payment_method,
         is_active=expense.is_active,
         created_at=expense.created_at,
     )
@@ -53,23 +41,9 @@ def create_expense(data: ExpenseCreate,db: Session = Depends(get_db),current_use
 
 
 @router.get("", response_model=List[ExpenseResponse])
-def list_expenses(
-    target_date: Optional[date] = Query(None),
-    from_date: Optional[date] = Query(None),
-    to_date: Optional[date] = Query(None),
-    category: Optional[ExpenseCategory] = Query(None),
-    min_amount: Optional[Decimal] = Query(None, ge=0),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    expenses = expense_service.get_expenses_filtered(
-        db,
-        current_user,
-        target_date=target_date,
-        category=category,
-        from_date=from_date,
-        to_date=to_date,
-        min_amount=min_amount,
+def list_expenses( target_date: Optional[date] = Query(None), category: Optional[ExpenseCategory] = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user),):
+    expenses = expense_service.get_expenses(
+        db, current_user, target_date=target_date, category=category
     )
     return [_to_response(e) for e in expenses]
 
