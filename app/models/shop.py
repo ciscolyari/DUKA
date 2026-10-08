@@ -42,7 +42,7 @@ class Shop(Base):
     name = Column(String, nullable=False)
     #user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     location = Column(String, nullable=False)
-    Active = Column(Boolean, default=True, nullable=True)
+    Active = Column("is_active", Boolean, default=True, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     

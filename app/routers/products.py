@@ -9,7 +9,7 @@ from app.schemas.product import productcreate,Response,productUpdate,Restock
 
 
 router = APIRouter(
-    prefix="/products",
+    prefix="/api/products",
     tags=["products"]
 )
 
@@ -86,4 +86,3 @@ def restock_product(
 def delete_product(product_id: int, db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin),):
     product_service.delete_product(db, product_id, current_admin)
     return None
-

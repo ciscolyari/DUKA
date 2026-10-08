@@ -1,4 +1,4 @@
-from pydantic import BaseModel,Field
+from pydantic import AliasChoices, BaseModel,Field
 from typing import Optional
 from decimal import Decimal
 from datetime import datetime
@@ -6,7 +6,7 @@ from datetime import datetime
 
 class Product(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    shop_id:int
+    shop_id: Optional[int] = None
     description: Optional[str] = None
     #sku:Optional[str] = Field(None, max_length=100)
     selling_price: Decimal =Field(gt=0)
@@ -24,7 +24,10 @@ class productUpdate(BaseModel):
         selling_price: Decimal = Field(gt=0)
         stock_quantity: int =Field(ge=0)
         low_stock: Optional[int] = Field(None, ge=0)
-        active: Optional[bool]=None
+        active: Optional[bool] = Field(
+            None,
+            validation_alias=AliasChoices("active", "Active"),
+        )
         
 class Restock(BaseModel):
     quantity: int =Field(gt=0)

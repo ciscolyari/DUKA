@@ -40,7 +40,10 @@ def get_products(db: Session,current_user: User,active_only : bool = True,
         query = query.filter((Product.name.ilike(term)))
     products = query.order_by(Product.name).all()    
     if low_stock_only:
-        products = [p for p in products if p.low_stock]   
+        products = [
+            p for p in products
+            if p.stock_quantity <= (p.low_stock if p.low_stock is not None else 10)
+        ]
     return products
 
 
@@ -63,7 +66,7 @@ def update_product(db: Session, product_id: int, data: productUpdate, current_us
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=f"Product '{update_data['name']}' already exists in this shop",)
 
     for field, value in update_data.items():
-        setattr(product, field, value)
+        setattr(product, "Active" if field == "active" else field, value)
 
     db.commit()
     db.refresh(product)
@@ -88,7 +91,7 @@ def restock_product(db: Session, product_id: int, data: Restock, current_user: U
 
 def delete_product(db: Session, product_id: int, current_user: User):
     product = get_product(db, product_id, current_user)
-    product.active = False
+    product.Active = False
     db.commit()
     
 
