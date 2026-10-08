@@ -9,11 +9,10 @@ from datetime import datetime
 class SaleItemCreate(BaseModel):
     product_id: int
     quantity: int=Field(gt=0)
-    price:Decimal=Field(gt=0, description="selling price")
     
     
 class SaleCreate(BaseModel):
-    items: List[SaleItemCreate] = Field(min_length=2)
+    items: List[SaleItemCreate] = Field(min_length=1)
     
     
 class SaleItemResponse(BaseModel):

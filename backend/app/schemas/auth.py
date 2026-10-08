@@ -1,11 +1,22 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import AliasChoices, BaseModel, Field, EmailStr
 from typing import Optional
 from app.models.user import UserRole
+
+
+class LoginUser(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    role: UserRole
+    active: bool
+    shop_id: Optional[int] = None
+    shop_name: Optional[str] = None
 
 
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    user: LoginUser
 
 
 class TokenData(BaseModel):
@@ -16,7 +27,11 @@ class TokenData(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    username: str = Field(
+        ...,
+        min_length=3,
+        validation_alias=AliasChoices("username", "email"),
+    )
     password: str = Field(..., min_length=4)
 
 
