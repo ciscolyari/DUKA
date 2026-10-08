@@ -11,7 +11,7 @@ from typing import List
 
 
 router = APIRouter(
-    prefix="/employee",
+    prefix="/api/employees",
     tags=["EMPLOYEE"]
 )
 
@@ -38,7 +38,7 @@ def update(
     employee_id:int,
     data:UserUpdate,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_employee)
+    current_admin: User = Depends(get_current_admin)
 ):
     return update_employee(db, employee_id, data, current_admin)
 

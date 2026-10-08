@@ -4,8 +4,6 @@ const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || t('http://lo
 api.interceptors.request.use((c) => {
   const t = localStorage.getItem('duka_token');
   if (t) c.headers.Authorization = `Bearer ${t}`;
-  const shop = localStorage.getItem('duka_shop');
-  if (shop) c.headers['X-Shop-ID'] = shop;
   return c;
 });
 api.interceptors.response.use((r) => r, (e) => {

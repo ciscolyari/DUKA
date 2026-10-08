@@ -4,8 +4,7 @@ import { shopService } from '../services/shopService';
 import { errMsg } from '../utils/format';
 const Ctx = createContext(null);
 export const useShop = () => useContext(Ctx);
-// Admin can own many shops. The selected shop id is sent as X-Shop-ID on every request (see services/api.js).
-// Employees belong to exactly one shop, decided by the backend from their token.
+// The current backend assigns each user to one shop, decided from their token.
 export function ShopProvider({ children }) {
   const { user } = useAuth(); const admin = user?.role === 'admin';
   const [shops, setShops] = useState([]), [shopId, setId] = useState(() => localStorage.getItem('duka_shop')), [loaded, setLoaded] = useState(false), [error, setError] = useState('');

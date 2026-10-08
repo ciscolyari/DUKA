@@ -1,5 +1,4 @@
-import api, { unwrap } from './api';
 export const paymentService = {
-  initiate: (data) => unwrap(api.post('/payments', data)),          // -> { transaction_id, status }
-  status: (id) => unwrap(api.get(`/payments/${id}`)),               // status: pending|paid|failed|cancelled
+  initiate: () => Promise.reject(new Error('Payment initiation is not implemented by the backend yet.')),
+  status: () => Promise.reject(new Error('Payment status is not implemented by the backend yet.')),
 };

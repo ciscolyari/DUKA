@@ -36,7 +36,7 @@ export function Login() {
 
 export function Register() {
   const nav = useNavigate(); const toast = useToast();
-  const [f, setF] = useState({ shop_name: '', full_name: '', username: '', password: '', confirm: '' }), [busy, setBusy] = useState(false);
+  const [f, setF] = useState({ shop_name: '', location: '', full_name: '', username: '', password: '', confirm: '' }), [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const submit = async (e) => { e.preventDefault();
     if (f.password !== f.confirm) return toast(t('Passwords do not match'), 'err');
@@ -46,6 +46,7 @@ export function Register() {
   return (<div className="authpage"><form className="card authbox" onSubmit={submit}>
     <div className="row end"><ThemeToggle /></div><h1>{t('Register your shop')}</h1><p className="muted">{t('The email you register with becomes the administrator account. The administrator then creates employee accounts.')}</p>
     <label>{t('Shop name')}<input required value={f.shop_name} onChange={set('shop_name')} /></label>
+    <label>{t('Location')}<input required value={f.location} onChange={set('location')} /></label>
     <label>{t('Your full name')}<input required value={f.full_name} onChange={set('full_name')} /></label>
     <label>{t('Admin email')}<input required type="email" value={f.username} onChange={set('username')} /></label>
     <label>{t('Password')}<input required minLength={6} type="password" value={f.password} onChange={set('password')} /></label>

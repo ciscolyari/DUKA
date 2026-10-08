@@ -22,6 +22,7 @@ class ExpenseCategory(str, enum.Enum):
     TRANSPORT = "transport"       
     RENT = "rent"                 
     SUPPLIES = "supplies"         
+    SALARY = "salary"
     OTHER = "other"               
 
 

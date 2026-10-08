@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from fastapi import Depends,HTTPException, status
+from fastapi import HTTPException, status
 from app.models.user import User, UserRole
 from app.core.security import hash_password
 from app.schemas.user import createuser,UserUpdate
@@ -49,6 +49,10 @@ def get_employee(db: Session, employee_id: int,current_admin: User):
 def update_employee(db: Session, employee_id: int, data:UserUpdate, current_admin: User):
     employee = get_employee(db, employee_id, current_admin)
     update_data = data.model_dump(exclude_unset= True)
+    if update_data.get("email") and update_data["email"] != employee.email:
+        existing = db.query(User).filter(User.email == update_data["email"]).first()
+        if existing:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="email already existing")
     if "password" in update_data:
         plain_password = update_data.pop("password")
         update_data["hashed_password"] = hash_password(plain_password)

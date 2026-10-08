@@ -23,7 +23,7 @@ export default function App() {
     <Route path="/employee" element={<RequireRole role="employee" />}><Route element={<AppLayout />}>
       <Route path="dashboard" element={<EmployeeDashboard />} /><Route path="products" element={<Products />} />
       <Route path="sales/new" element={<NewSale />} /><Route path="expenses" element={<Expenses employee />} /><Route path="sales" element={<MySales />} />
-      <Route path="inventory" element={<Inventory />} /><Route path="settings" element={<Settings />} />
+      <Route path="inventory" element={<Inventory employee />} /><Route path="settings" element={<Settings />} />
     </Route></Route>
     <Route path="*" element={<Navigate to="/" />} />
   </Routes>);

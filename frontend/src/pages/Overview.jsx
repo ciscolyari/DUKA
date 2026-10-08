@@ -16,7 +16,7 @@ const Chart = ({ title, children }) => <div className="card"><h3>{title}</h3><di
 
 export function Dashboard({ reports }) {
   const [range, setRange] = useState({ from: '', to: '' });
-  const { data: d, loading, error, reload } = useFetch(() => reportService.summary(range), [range.from, range.to]);
+  const { data: d, loading, error, reload } = useFetch(() => reportService.summary(range, reports), [range.from, range.to, reports]);
   const trend = (d?.trend || []).map((t) => ({ ...t, profit: t.sales - t.expenses }));
   const profit = d ? (reports ? d.total_sales - d.total_expenses : d.today_sales - d.today_expenses) : 0;
   return (<div>
