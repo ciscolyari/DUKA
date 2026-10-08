@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import auth,products,user,sales,shop,expense,subscription,reports
-from app .routers import billing,subscription_plan
+from app .routers import billing,subscription_plan,email
 from .core.database import engine,Base
 
 
@@ -21,6 +21,8 @@ app.add_middleware(
 
 Base.metadata.create_all(engine)
 
+
+#app.include_router(email.router)
 app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(products.router)

@@ -21,15 +21,26 @@ router = APIRouter(prefix="/api/expenses", tags=["Expenses"])
 
 
 def _to_response(expense) -> ExpenseResponse:
+    recorded_by_name = expense.recorded_by.full_name if getattr(expense, 'recorded_by', None) else None
+    payment_method = None
+    if expense.notes:
+        for line in str(expense.notes).split(';'):
+            if line.lower().startswith('payment method:'):
+                payment_method = line.split(':', 1)[1].strip()
+                break
     return ExpenseResponse(
         id=expense.id,
         shop_id=expense.shop_id,
         recorded_by_id=expense.recorded_by_id,
-        recorded_by_name=expense.recorded_by.full_name if expense.recorded_by else None,
+        recorded_by_name=recorded_by_name,
+        recorded_by=recorded_by_name,
+        title=expense.description,
         category=expense.category,
         description=expense.description,
+        date=expense.created_at,
         amount=expense.amount,
         notes=expense.notes,
+        payment_method=payment_method,
         is_active=expense.is_active,
         created_at=expense.created_at,
     )

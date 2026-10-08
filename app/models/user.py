@@ -24,6 +24,10 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True),default=lambda: datetime.now(timezone.utc),onupdate=lambda: datetime.now(timezone.utc),nullable=False)
 
     role = Column(Enum(UserRole,values_callable=lambda enum_class: [member.value for member in enum_class],name="userrole"),nullable=False,default=UserRole.EMPLOYEE)
+    
+    verification_code = Column(String, nullable=True)
+    code_expires_at = Column(DateTime, nullable=True)
+    
     shop = relationship("Shop", back_populates="users")
     sales = relationship("Sale", back_populates="employee")
     expenses = relationship("Expense", back_populates="recorded_by")
@@ -31,3 +35,7 @@ class User(Base):
     @property
     def shop_name(self) -> Optional[str]:
         return self.shop.name if self.shop else None
+
+    @property
+    def username(self) -> str:
+        return self.email

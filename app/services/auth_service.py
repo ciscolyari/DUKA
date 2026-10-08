@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from fastapi import HTTPException, status
 
 from app.core.security import hash_password, verify_password, create_access_token
@@ -6,6 +7,8 @@ from app.models.user import User, UserRole
 from app.models.shop import Shop
 from app.schemas.auth import AdminRegisterRequest, LoginRequest,TokenData
 from app.services.subscription_service import create_plan
+from app.dependencies.auth import get_current_admin
+#from app.services.subscription_service import create_trial_for_shop
 
 
 def register_admin(db: Session, data: AdminRegisterRequest):
@@ -16,9 +19,11 @@ def register_admin(db: Session, data: AdminRegisterRequest):
     
     shop = Shop(
         name=data.shop_name,
-        location=data.location
+        #location=data.location
+        location=getattr(data, "shop_location", None) or getattr(data, "location", None),
     )
-    create_plan(shop)   # ← trial 14 days
+    #create_plan(shop) 
+    #create_trial_for_shop(db, shop.id)# ← trial 14 days
 
     db.add(shop)
     db.flush()
@@ -65,7 +70,7 @@ def authenticate_user(db: Session, data: LoginRequest):
 
 
 def userlogin(email:str,password: str,db: Session):
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(func.lower(User.email) == email.strip().lower()).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"incorect user name")
     

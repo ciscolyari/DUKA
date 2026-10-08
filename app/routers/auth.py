@@ -17,11 +17,12 @@ router = APIRouter(prefix="/api/auth",
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
-def register(data: AdminRegisterRequest, db: Session = Depends(get_db)):
-   
+def register(
+    data: AdminRegisterRequest,
+    db: Session = Depends(get_db)
+):
     admin = register_admin(db, data)
     return admin
-
 
 @router.post("/login", response_model=Token)
 def login(data: OAuth2PasswordRequestForm = Depends(),db: Session = Depends(get_db),

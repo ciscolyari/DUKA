@@ -40,21 +40,30 @@ class Shop(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    #user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     location = Column(String, nullable=False)
-    Active = Column(Boolean, default=True, nullable=True)
+    address = Column(String(255), nullable=True)
+    phone = Column(String(50), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
-    
+
     subscription_starts_at = Column(DateTime(timezone=True), nullable=True)
     subscription_expires_at = Column(DateTime(timezone=True), nullable=True)
     last_payment_ref = Column(String(255), nullable=True)
-    
+
     subscription_status = Column(
             Enum(SubscriptionStatus),
             nullable=False,
             default=SubscriptionStatus.ACTIVE,
         )
+
+    @property
+    def Active(self):
+        return self.is_active
+
+    @Active.setter
+    def Active(self, value):
+        self.is_active = value
 
 
 

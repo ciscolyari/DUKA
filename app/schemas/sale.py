@@ -13,6 +13,7 @@ class SaleItemCreate(BaseModel):
     
 class SaleCreate(BaseModel):
     items: List[SaleItemCreate] = Field(min_length=1)
+    note: Optional[str] = Field(None, max_length=120)
     
     
 class SaleItemResponse(BaseModel):
@@ -37,6 +38,7 @@ class SaleResponse(BaseModel):
     total_amount: Decimal
     status: SaleStatus
     is_locked:bool
+    note: Optional[str] = None
     items: List[SaleItemResponse] = []
     created_at: datetime        
     
