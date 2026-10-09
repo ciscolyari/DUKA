@@ -16,7 +16,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Shop-ID"],
 )
 
-Base.metadata.create_all(engine)
+#Base.metadata.create_all(engine)
 
 app.include_router(auth.router)
 app.include_router(user.router)
